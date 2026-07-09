@@ -17,6 +17,16 @@
       },
       "id": "Field_1mr2nm0",
       "key": "textfield_287k6p"
+    },
+    {
+      "label": "Number field",
+      "type": "number",
+      "layout": {
+        "row": "Row_1a2bcd3",
+        "columns": null
+      },
+      "id": "Field_2ab3cd4",
+      "key": "number_field"
     }
   ],
   "type": "default"
