@@ -30,9 +30,8 @@
       <bpmn:extensionElements>
         <zeebe:userTask />
         <zeebe:ioMapping>
-          <zeebe:input source="order_title" target="order_title" />
+          <zeebe:input source="=order_title" target="order_title" />
           <zeebe:input source="=order_status" target="order_status" />
-          <zeebe:input source="=current_quantity" target="current_quantity" />
         </zeebe:ioMapping>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_OrderOpen</bpmn:incoming>
@@ -75,7 +74,7 @@
     <bpmn:sequenceFlow id="Flow_OrderOpen" name="open (default)" sourceRef="Gateway_OrderOpen" targetRef="UserTask_ReviewChange" />
     <bpmn:sequenceFlow id="Flow_ToSplit" sourceRef="UserTask_ReviewChange" targetRef="Gateway_WhichChange" />
     <bpmn:sequenceFlow id="Flow_ToQuantityMsg" name="quantity changed" sourceRef="Gateway_WhichChange" targetRef="ThrowEvent_QuantityChange">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=checkbox_qty_change = true</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=checkbox_quantity_change = true</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_OtherChanges" name="Other Changes" sourceRef="Gateway_WhichChange" targetRef="ThrowEvent_OtherChanges" />
     <bpmn:sequenceFlow id="Flow_QuantityToMerge" sourceRef="ThrowEvent_QuantityChange" targetRef="Gateway_ChangeHandled" />
