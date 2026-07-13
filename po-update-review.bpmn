@@ -18,7 +18,7 @@
       <bpmn:incoming>Flow_ToQueryOrder</bpmn:incoming>
       <bpmn:outgoing>Flow_ToGuard</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:exclusiveGateway id="Gateway_OrderOpen" name="Order completed?" default="Flow_OrderOpen">
+    <bpmn:exclusiveGateway id="Gateway_OrderOpen" name="Order open?" default="Flow_OrderRejected">
       <bpmn:incoming>Flow_ToGuard</bpmn:incoming>
       <bpmn:outgoing>Flow_OrderOpen</bpmn:outgoing>
       <bpmn:outgoing>Flow_OrderRejected</bpmn:outgoing>
@@ -68,10 +68,10 @@
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_ToQueryOrder" sourceRef="StartEvent_OrderReceived" targetRef="ServiceTask_QueryOrder" />
     <bpmn:sequenceFlow id="Flow_ToGuard" sourceRef="ServiceTask_QueryOrder" targetRef="Gateway_OrderOpen" />
-    <bpmn:sequenceFlow id="Flow_OrderRejected" name="completed" sourceRef="Gateway_OrderOpen" targetRef="EndEvent_ChangeRejected">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=order_status = "COMPLETED"</bpmn:conditionExpression>
+    <bpmn:sequenceFlow id="Flow_OrderRejected" name="not open (default)" sourceRef="Gateway_OrderOpen" targetRef="EndEvent_ChangeRejected" />
+    <bpmn:sequenceFlow id="Flow_OrderOpen" name="open" sourceRef="Gateway_OrderOpen" targetRef="UserTask_ReviewChange">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=order_status = "OPEN"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_OrderOpen" name="open (default)" sourceRef="Gateway_OrderOpen" targetRef="UserTask_ReviewChange" />
     <bpmn:sequenceFlow id="Flow_ToSplit" sourceRef="UserTask_ReviewChange" targetRef="Gateway_WhichChange" />
     <bpmn:sequenceFlow id="Flow_ToQuantityMsg" name="quantity changed" sourceRef="Gateway_WhichChange" targetRef="ThrowEvent_QuantityChange">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=checkbox_quantity_change = true</bpmn:conditionExpression>
