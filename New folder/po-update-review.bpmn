@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_PoUpdateReview" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Web Modeler" exporterVersion="0ac4534" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.9.0">
+  <bpmn:process id="po-update-review" name="PO Update (Review Copy)" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_OrderReceived" name="PO update requested">
+      <bpmn:extensionElements>
+        <zeebe:ioMapping>
+          <zeebe:output source="=order_id" target="order_id" />
+          <zeebe:output source="=requested_by" target="requested_by" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:outgoing>Flow_ToQueryOrder</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Start" messageRef="Message_PoUpdateRequested" />
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="ServiceTask_QueryOrder" name="Query order information">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="Query-Order" retries="3" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToQueryOrder</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToGuard</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_OrderOpen" name="Order completed?" default="Flow_OrderOpen">
+      <bpmn:incoming>Flow_ToGuard</bpmn:incoming>
+      <bpmn:outgoing>Flow_OrderOpen</bpmn:outgoing>
+      <bpmn:outgoing>Flow_OrderRejected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_ChangeRejected" name="PO Update rejected">
+      <bpmn:incoming>Flow_OrderRejected</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="UserTask_ReviewChange" name="Review PO change">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:ioMapping>
+          <zeebe:input source="order_title" target="order_title" />
+          <zeebe:input source="=order_status" target="order_status" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_OrderOpen</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToSplit</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_WhichChange" name="What is the Order change type?">
+      <bpmn:incoming>Flow_ToSplit</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToQuantityMsg</bpmn:outgoing>
+      <bpmn:outgoing>Flow_OtherChanges</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:intermediateThrowEvent id="ThrowEvent_QuantityChange" name="Quantity changed">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="quantity-change" retries="3" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToQuantityMsg</bpmn:incoming>
+      <bpmn:outgoing>Flow_QuantityToMerge</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Quantity" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:intermediateThrowEvent id="ThrowEvent_OtherChanges" name="Other changes">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="other_changes" retries="3" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_OtherChanges</bpmn:incoming>
+      <bpmn:outgoing>Flow_OtherToMerge</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Other" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:exclusiveGateway id="Gateway_ChangeHandled" name="Change handled">
+      <bpmn:incoming>Flow_QuantityToMerge</bpmn:incoming>
+      <bpmn:incoming>Flow_OtherToMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToCompleted</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_Completed" name="PO update completed">
+      <bpmn:incoming>Flow_ToCompleted</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_ToQueryOrder" sourceRef="StartEvent_OrderReceived" targetRef="ServiceTask_QueryOrder" />
+    <bpmn:sequenceFlow id="Flow_ToGuard" sourceRef="ServiceTask_QueryOrder" targetRef="Gateway_OrderOpen" />
+    <bpmn:sequenceFlow id="Flow_OrderRejected" name="completed" sourceRef="Gateway_OrderOpen" targetRef="EndEvent_ChangeRejected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=order_status = "COMPLETED"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_OrderOpen" name="open (default)" sourceRef="Gateway_OrderOpen" targetRef="UserTask_ReviewChange" />
+    <bpmn:sequenceFlow id="Flow_ToSplit" sourceRef="UserTask_ReviewChange" targetRef="Gateway_WhichChange" />
+    <bpmn:sequenceFlow id="Flow_ToQuantityMsg" name="quantity changed" sourceRef="Gateway_WhichChange" targetRef="ThrowEvent_QuantityChange">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=checkbox_qty_change = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_OtherChanges" name="Other Changes" sourceRef="Gateway_WhichChange" targetRef="ThrowEvent_OtherChanges" />
+    <bpmn:sequenceFlow id="Flow_QuantityToMerge" sourceRef="ThrowEvent_QuantityChange" targetRef="Gateway_ChangeHandled" />
+    <bpmn:sequenceFlow id="Flow_OtherToMerge" sourceRef="ThrowEvent_OtherChanges" targetRef="Gateway_ChangeHandled" />
+    <bpmn:sequenceFlow id="Flow_ToCompleted" sourceRef="Gateway_ChangeHandled" targetRef="EndEvent_Completed" />
+  </bpmn:process>
+  <bpmn:message id="Message_PoUpdateRequested" name="YOURNAME-po-update-requested" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="po-update-review">
+      <bpmndi:BPMNShape id="StartEvent_OrderReceived_di" bpmnElement="StartEvent_OrderReceived">
+        <dc:Bounds x="152" y="222" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="143" y="265" width="55" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_QueryOrder_di" bpmnElement="ServiceTask_QueryOrder">
+        <dc:Bounds x="250" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_OrderOpen_di" bpmnElement="Gateway_OrderOpen" isMarkerVisible="true">
+        <dc:Bounds x="410" y="215" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="391" y="185" width="88" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_ChangeRejected_di" bpmnElement="EndEvent_ChangeRejected">
+        <dc:Bounds x="417" y="342" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="390" y="385" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UserTask_ReviewChange_di" bpmnElement="UserTask_ReviewChange">
+        <dc:Bounds x="520" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_WhichChange_di" bpmnElement="Gateway_WhichChange" isMarkerVisible="true">
+        <dc:Bounds x="680" y="215" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="661" y="272" width="88" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ThrowEvent_QuantityChange_di" bpmnElement="ThrowEvent_QuantityChange">
+        <dc:Bounds x="812" y="132" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="786" y="98" width="88" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ThrowEvent_OtherChanges_di" bpmnElement="ThrowEvent_OtherChanges">
+        <dc:Bounds x="812" y="312" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="795" y="355" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_ChangeHandled_di" bpmnElement="Gateway_ChangeHandled" isMarkerVisible="true">
+        <dc:Bounds x="920" y="215" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="905" y="272" width="80" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Completed_di" bpmnElement="EndEvent_Completed">
+        <dc:Bounds x="1032" y="222" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1023" y="265" width="55" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_ToQueryOrder_di" bpmnElement="Flow_ToQueryOrder">
+        <di:waypoint x="188" y="240" />
+        <di:waypoint x="250" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToGuard_di" bpmnElement="Flow_ToGuard">
+        <di:waypoint x="350" y="240" />
+        <di:waypoint x="410" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_OrderRejected_di" bpmnElement="Flow_OrderRejected">
+        <di:waypoint x="435" y="265" />
+        <di:waypoint x="435" y="342" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="443" y="295" width="50" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_OrderOpen_di" bpmnElement="Flow_OrderOpen">
+        <di:waypoint x="460" y="240" />
+        <di:waypoint x="520" y="240" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="455" y="222" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToSplit_di" bpmnElement="Flow_ToSplit">
+        <di:waypoint x="620" y="240" />
+        <di:waypoint x="680" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToQuantityMsg_di" bpmnElement="Flow_ToQuantityMsg">
+        <di:waypoint x="705" y="215" />
+        <di:waypoint x="705" y="150" />
+        <di:waypoint x="812" y="150" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="708" y="156" width="84" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_OtherChanges_di" bpmnElement="Flow_OtherChanges">
+        <di:waypoint x="705" y="265" />
+        <di:waypoint x="705" y="330" />
+        <di:waypoint x="812" y="330" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="708" y="336" width="76" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_QuantityToMerge_di" bpmnElement="Flow_QuantityToMerge">
+        <di:waypoint x="848" y="150" />
+        <di:waypoint x="945" y="150" />
+        <di:waypoint x="945" y="215" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_OtherToMerge_di" bpmnElement="Flow_OtherToMerge">
+        <di:waypoint x="848" y="330" />
+        <di:waypoint x="945" y="330" />
+        <di:waypoint x="945" y="265" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToCompleted_di" bpmnElement="Flow_ToCompleted">
+        <di:waypoint x="970" y="240" />
+        <di:waypoint x="1032" y="240" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
