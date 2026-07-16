@@ -1,0 +1,5 @@
+# Environment / credential files — never commit real secrets
+.env
+*.env
+!*.env.template
+!*.env.example
