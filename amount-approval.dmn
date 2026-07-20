@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+             xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/"
+             xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/"
+             id="AmountApprovalDefinitions" name="Amount Approval"
+             namespace="http://camunda.org/schema/1.0/dmn">
+  <decision id="amount_approval" name="Amount Approval">
+    <decisionTable id="decisionTable_amount_approval" hitPolicy="UNIQUE">
+      <input id="input_amount" label="Amount">
+        <inputExpression id="inputExpression_amount" typeRef="number">
+          <text>amount</text>
+        </inputExpression>
+      </input>
+      <output id="output_decision" label="Decision" name="decision" typeRef="string"/>
+      <rule id="rule_approve">
+        <inputEntry id="inputEntry_approve">
+          <text>&lt; 500</text>
+        </inputEntry>
+        <outputEntry id="outputEntry_approve">
+          <text>"approve"</text>
+        </outputEntry>
+      </rule>
+      <rule id="rule_reject">
+        <inputEntry id="inputEntry_reject">
+          <text>&gt;= 500</text>
+        </inputEntry>
+        <outputEntry id="outputEntry_reject">
+          <text>"reject"</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram>
+      <dmndi:DMNShape dmnElementRef="amount_approval">
+        <dc:Bounds height="80" width="180" x="160" y="100"/>
+      </dmndi:DMNShape>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>
