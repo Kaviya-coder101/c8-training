@@ -1,0 +1,77 @@
+{
+  "$schema": "https://camunda.com/json-schema/cpt-test-cases/8.9/schema.json",
+  "testCases": [
+    {
+      "name": "small order — auto approved",
+      "description": "An order of 1000 or less skips manager review and is auto-approved.",
+      "instructions": [
+        {
+          "type": "CREATE_PROCESS_INSTANCE",
+          "processDefinitionSelector": { "processDefinitionId": "simple-order-review" },
+          "variables": { "amount": 500 }
+        },
+        {
+          "type": "COMPLETE_JOB",
+          "jobSelector": { "elementId": "Task_Validate" }
+        },
+        {
+          "type": "ASSERT_ELEMENT_INSTANCES",
+          "processInstanceSelector": { "processDefinitionId": "simple-order-review" },
+          "elementSelectors": [{ "elementId": "Task_AutoApprove" }],
+          "state": "IS_ACTIVE"
+        },
+        {
+          "type": "COMPLETE_JOB",
+          "jobSelector": { "elementId": "Task_AutoApprove" }
+        },
+        {
+          "type": "ASSERT_ELEMENT_INSTANCES",
+          "processInstanceSelector": { "processDefinitionId": "simple-order-review" },
+          "elementSelectors": [{ "elementId": "End_AutoApproved" }],
+          "state": "IS_COMPLETED"
+        },
+        {
+          "type": "ASSERT_PROCESS_INSTANCE",
+          "processInstanceSelector": { "processDefinitionId": "simple-order-review" },
+          "state": "IS_COMPLETED"
+        }
+      ]
+    },
+    {
+      "name": "large order — manager approval required",
+      "description": "An order above 1000 is routed to manager approval before completing.",
+      "instructions": [
+        {
+          "type": "CREATE_PROCESS_INSTANCE",
+          "processDefinitionSelector": { "processDefinitionId": "simple-order-review" },
+          "variables": { "amount": 5000 }
+        },
+        {
+          "type": "COMPLETE_JOB",
+          "jobSelector": { "elementId": "Task_Validate" }
+        },
+        {
+          "type": "ASSERT_ELEMENT_INSTANCES",
+          "processInstanceSelector": { "processDefinitionId": "simple-order-review" },
+          "elementSelectors": [{ "elementId": "Task_ManagerApproval" }],
+          "state": "IS_ACTIVE"
+        },
+        {
+          "type": "COMPLETE_JOB",
+          "jobSelector": { "elementId": "Task_ManagerApproval" }
+        },
+        {
+          "type": "ASSERT_ELEMENT_INSTANCES",
+          "processInstanceSelector": { "processDefinitionId": "simple-order-review" },
+          "elementSelectors": [{ "elementId": "End_Approved" }],
+          "state": "IS_COMPLETED"
+        },
+        {
+          "type": "ASSERT_PROCESS_INSTANCE",
+          "processInstanceSelector": { "processDefinitionId": "simple-order-review" },
+          "state": "IS_COMPLETED"
+        }
+      ]
+    }
+  ]
+}

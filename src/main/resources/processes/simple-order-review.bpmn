@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_SimpleOrderReview" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.0.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.9.0">
+  <bpmn:process id="simple-order-review" name="Simple Order Review" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Order received">
+      <bpmn:outgoing>Flow_Start_Validate</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_Validate" name="Validate order">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="validate-order" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Start_Validate</bpmn:incoming>
+      <bpmn:outgoing>Flow_Validate_Gateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_Amount" name="Amount &gt; 1000?" default="Flow_Gateway_Auto">
+      <bpmn:incoming>Flow_Validate_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Gateway_Manager</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Gateway_Auto</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_ManagerApproval" name="Manager approval">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="manager-approval" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Gateway_Manager</bpmn:incoming>
+      <bpmn:outgoing>Flow_Manager_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_AutoApprove" name="Auto approve">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="auto-approve" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Gateway_Auto</bpmn:incoming>
+      <bpmn:outgoing>Flow_Auto_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Approved" name="Order approved">
+      <bpmn:incoming>Flow_Manager_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_AutoApproved" name="Order auto-approved">
+      <bpmn:incoming>Flow_Auto_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_Validate" sourceRef="StartEvent_1" targetRef="Task_Validate" />
+    <bpmn:sequenceFlow id="Flow_Validate_Gateway" sourceRef="Task_Validate" targetRef="Gateway_Amount" />
+    <bpmn:sequenceFlow id="Flow_Gateway_Manager" name="yes" sourceRef="Gateway_Amount" targetRef="Task_ManagerApproval">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">=amount &gt; 1000</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Gateway_Auto" name="no" sourceRef="Gateway_Amount" targetRef="Task_AutoApprove" />
+    <bpmn:sequenceFlow id="Flow_Manager_End" sourceRef="Task_ManagerApproval" targetRef="End_Approved" />
+    <bpmn:sequenceFlow id="Flow_Auto_End" sourceRef="Task_AutoApprove" targetRef="End_AutoApproved" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="simple-order-review">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="160" y="180" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="147" y="223" width="63" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Validate_di" bpmnElement="Task_Validate">
+        <dc:Bounds x="250" y="158" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Amount_di" bpmnElement="Gateway_Amount" isMarkerVisible="true">
+        <dc:Bounds x="410" y="173" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="399" y="143" width="73" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ManagerApproval_di" bpmnElement="Task_ManagerApproval">
+        <dc:Bounds x="540" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AutoApprove_di" bpmnElement="Task_AutoApprove">
+        <dc:Bounds x="540" y="280" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Approved_di" bpmnElement="End_Approved">
+        <dc:Bounds x="712" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="694" y="145" width="73" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_AutoApproved_di" bpmnElement="End_AutoApproved">
+        <dc:Bounds x="712" y="302" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="688" y="345" width="85" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_Validate_di" bpmnElement="Flow_Start_Validate">
+        <di:waypoint x="196" y="198" />
+        <di:waypoint x="250" y="198" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Validate_Gateway_di" bpmnElement="Flow_Validate_Gateway">
+        <di:waypoint x="350" y="198" />
+        <di:waypoint x="410" y="198" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Gateway_Manager_di" bpmnElement="Flow_Gateway_Manager">
+        <di:waypoint x="435" y="173" />
+        <di:waypoint x="435" y="120" />
+        <di:waypoint x="540" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="444" y="143" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Gateway_Auto_di" bpmnElement="Flow_Gateway_Auto">
+        <di:waypoint x="435" y="223" />
+        <di:waypoint x="435" y="320" />
+        <di:waypoint x="540" y="320" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="444" y="293" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Manager_End_di" bpmnElement="Flow_Manager_End">
+        <di:waypoint x="640" y="120" />
+        <di:waypoint x="712" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Auto_End_di" bpmnElement="Flow_Auto_End">
+        <di:waypoint x="640" y="320" />
+        <di:waypoint x="712" y="320" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
