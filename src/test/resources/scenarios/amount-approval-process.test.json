@@ -1,0 +1,78 @@
+{
+  "$schema": "https://camunda.com/json-schema/cpt-test-cases/8.9/schema.json",
+  "testCases": [
+    {
+      "name": "Small amount — approved",
+      "description": "An amount below 500 is approved and the process ends on the approved path.",
+      "instructions": [
+        {
+          "type": "CREATE_PROCESS_INSTANCE",
+          "processDefinitionSelector": { "processDefinitionId": "amount-approval-process" },
+          "variables": { "amount": 100 }
+        },
+        {
+          "type": "ASSERT_ELEMENT_INSTANCES",
+          "processInstanceSelector": { "processDefinitionId": "amount-approval-process" },
+          "elementSelectors": [{ "elementId": "End_Approved" }],
+          "state": "IS_COMPLETED"
+        },
+        {
+          "type": "ASSERT_PROCESS_INSTANCE",
+          "processInstanceSelector": { "processDefinitionId": "amount-approval-process" },
+          "state": "IS_COMPLETED"
+        },
+        {
+          "type": "ASSERT_DECISION",
+          "decisionSelector": { "decisionDefinitionId": "amount_approval" },
+          "output": "approve",
+          "matchedRules": [1]
+        }
+      ]
+    },
+    {
+      "name": "Large amount — rejected",
+      "description": "An amount of 500 or more is rejected and the process ends on the rejected path.",
+      "instructions": [
+        {
+          "type": "CREATE_PROCESS_INSTANCE",
+          "processDefinitionSelector": { "processDefinitionId": "amount-approval-process" },
+          "variables": { "amount": 750 }
+        },
+        {
+          "type": "ASSERT_ELEMENT_INSTANCES",
+          "processInstanceSelector": { "processDefinitionId": "amount-approval-process" },
+          "elementSelectors": [{ "elementId": "End_Rejected" }],
+          "state": "IS_COMPLETED"
+        },
+        {
+          "type": "ASSERT_PROCESS_INSTANCE",
+          "processInstanceSelector": { "processDefinitionId": "amount-approval-process" },
+          "state": "IS_COMPLETED"
+        },
+        {
+          "type": "ASSERT_DECISION",
+          "decisionSelector": { "decisionDefinitionId": "amount_approval" },
+          "output": "reject",
+          "matchedRules": [2]
+        }
+      ]
+    },
+    {
+      "name": "Boundary amount 500 — rejected",
+      "description": "Exactly 500 is not below the threshold, so the decision rejects it.",
+      "instructions": [
+        {
+          "type": "EVALUATE_DECISION",
+          "decisionDefinitionSelector": { "decisionDefinitionId": "amount_approval" },
+          "variables": { "amount": 500 }
+        },
+        {
+          "type": "ASSERT_DECISION",
+          "decisionSelector": { "decisionDefinitionId": "amount_approval" },
+          "output": "reject",
+          "matchedRules": [2]
+        }
+      ]
+    }
+  ]
+}

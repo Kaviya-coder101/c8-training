@@ -3,3 +3,6 @@
 *.env
 !*.env.template
 !*.env.example
+
+# Maven build output
+target/
