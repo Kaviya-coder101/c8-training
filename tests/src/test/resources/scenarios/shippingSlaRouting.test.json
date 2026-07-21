@@ -1,0 +1,123 @@
+{
+  "$schema": "https://camunda.com/json-schema/cpt-test-cases/8.9/schema.json",
+  "testCases": [
+    {
+      "name": "Domestic priority order — EXPRESS in 1 day (rule 1)",
+      "description": "A priority order shipping domestically routes to EXPRESS with the tightest SLA.",
+      "instructions": [
+        {
+          "type": "EVALUATE_DECISION",
+          "decisionDefinitionSelector": { "decisionDefinitionId": "shippingSlaRouting" },
+          "variables": { "destinationZone": "DOMESTIC", "priority": true }
+        },
+        {
+          "type": "ASSERT_DECISION",
+          "decisionSelector": { "decisionDefinitionId": "shippingSlaRouting" },
+          "output": { "shippingMethod": "EXPRESS", "slaDays": 1 },
+          "matchedRules": [1]
+        }
+      ]
+    },
+    {
+      "name": "Domestic standard order — STANDARD in 3 days (rule 2)",
+      "description": "A non-priority order shipping domestically routes to STANDARD.",
+      "instructions": [
+        {
+          "type": "EVALUATE_DECISION",
+          "decisionDefinitionSelector": { "decisionDefinitionId": "shippingSlaRouting" },
+          "variables": { "destinationZone": "DOMESTIC", "priority": false }
+        },
+        {
+          "type": "ASSERT_DECISION",
+          "decisionSelector": { "decisionDefinitionId": "shippingSlaRouting" },
+          "output": { "shippingMethod": "STANDARD", "slaDays": 3 },
+          "matchedRules": [2]
+        }
+      ]
+    },
+    {
+      "name": "EU priority order — EXPRESS in 2 days (rule 3)",
+      "description": "A priority order shipping to the EU routes to EXPRESS with a slightly looser SLA than domestic.",
+      "instructions": [
+        {
+          "type": "EVALUATE_DECISION",
+          "decisionDefinitionSelector": { "decisionDefinitionId": "shippingSlaRouting" },
+          "variables": { "destinationZone": "EU", "priority": true }
+        },
+        {
+          "type": "ASSERT_DECISION",
+          "decisionSelector": { "decisionDefinitionId": "shippingSlaRouting" },
+          "output": { "shippingMethod": "EXPRESS", "slaDays": 2 },
+          "matchedRules": [3]
+        }
+      ]
+    },
+    {
+      "name": "EU standard order — STANDARD in 5 days (rule 4)",
+      "description": "A non-priority order shipping to the EU routes to STANDARD.",
+      "instructions": [
+        {
+          "type": "EVALUATE_DECISION",
+          "decisionDefinitionSelector": { "decisionDefinitionId": "shippingSlaRouting" },
+          "variables": { "destinationZone": "EU", "priority": false }
+        },
+        {
+          "type": "ASSERT_DECISION",
+          "decisionSelector": { "decisionDefinitionId": "shippingSlaRouting" },
+          "output": { "shippingMethod": "STANDARD", "slaDays": 5 },
+          "matchedRules": [4]
+        }
+      ]
+    },
+    {
+      "name": "International priority order — EXPRESS in 4 days (rule 5)",
+      "description": "A priority order shipping internationally routes to EXPRESS with the longest express SLA.",
+      "instructions": [
+        {
+          "type": "EVALUATE_DECISION",
+          "decisionDefinitionSelector": { "decisionDefinitionId": "shippingSlaRouting" },
+          "variables": { "destinationZone": "INTERNATIONAL", "priority": true }
+        },
+        {
+          "type": "ASSERT_DECISION",
+          "decisionSelector": { "decisionDefinitionId": "shippingSlaRouting" },
+          "output": { "shippingMethod": "EXPRESS", "slaDays": 4 },
+          "matchedRules": [5]
+        }
+      ]
+    },
+    {
+      "name": "International standard order — FREIGHT in 10 days (rule 6)",
+      "description": "A non-priority order shipping internationally routes to FREIGHT with the longest SLA.",
+      "instructions": [
+        {
+          "type": "EVALUATE_DECISION",
+          "decisionDefinitionSelector": { "decisionDefinitionId": "shippingSlaRouting" },
+          "variables": { "destinationZone": "INTERNATIONAL", "priority": false }
+        },
+        {
+          "type": "ASSERT_DECISION",
+          "decisionSelector": { "decisionDefinitionId": "shippingSlaRouting" },
+          "output": { "shippingMethod": "FREIGHT", "slaDays": 10 },
+          "matchedRules": [6]
+        }
+      ]
+    },
+    {
+      "name": "Unknown zone priority order — no rule matches (UK stress test)",
+      "description": "A priority order to an out-of-range zone (UK) matches no rule; the UNIQUE table returns no result rather than a safe default.",
+      "instructions": [
+        {
+          "type": "EVALUATE_DECISION",
+          "decisionDefinitionSelector": { "decisionDefinitionId": "shippingSlaRouting" },
+          "variables": { "destinationZone": "UK", "priority": true }
+        },
+        {
+          "type": "ASSERT_DECISION",
+          "decisionSelector": { "decisionDefinitionId": "shippingSlaRouting" },
+          "noMatchedRules": true
+        }
+      ]
+    }
+  ]
+}
