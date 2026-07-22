@@ -1,4 +1,4 @@
-# kaviya_order_process — Node.js worker skeleton
+# kaviya_order_process — TypeScript worker skeleton
 
 Job worker skeleton for the `kaviya_order_process` BPMN process
 (`../order-process-boundary-events.bpmn`, Camunda 8.9).
@@ -28,7 +28,20 @@ real inventory / payment / shipping calls.
 - **Happy path** → `job.complete(variables)`.
 
 > Jobs may be delivered more than once — make each handler idempotent
-> (use `job.key` or `orderId` as an idempotency key in the downstream system).
+> (use `job.jobKey` or `orderId` as an idempotency key in the downstream system).
+
+## Layout
+
+```
+src/
+├── index.ts          # bootstraps client, registers all 3 workers, graceful shutdown
+├── client.ts         # CamundaRestApi client (env-driven)
+├── types.ts          # Job/WorkerConfig types derived from the SDK
+└── workers/
+    ├── check-inventory.ts
+    ├── charge-payment.ts
+    └── ship-items.ts
+```
 
 ## Run
 
@@ -36,8 +49,13 @@ real inventory / payment / shipping calls.
 cd worker
 npm install
 cp .env.example .env    # set CAMUNDA_BASE_URL (+ OAuth vars for SaaS/Self-Managed)
-npm start               # or: npm run dev  (auto-restart on change)
+
+npm run dev             # run from TypeScript with auto-restart (tsx)
+# or
+npm run build && npm start   # compile to dist/ then run with node
 ```
+
+`npm run typecheck` type-checks without emitting.
 
 With a worker running, start a process instance (e.g. via `c8ctl` or Operate)
 and the tasks will be picked up automatically.
