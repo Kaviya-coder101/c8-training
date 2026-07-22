@@ -1,3 +1,5 @@
+import type { Job, WorkerConfig } from "../types.js";
+
 /**
  * Worker for the "Check inventory" service task.
  *
@@ -11,7 +13,13 @@
  * If an ordered item is not in stock, throw a BPMN error so the engine routes
  * the token down the "Item not in stock" boundary event instead of retrying.
  */
-export const checkInventoryConfig = {
+
+interface CheckInventoryVariables {
+  orderId: string;
+  items: Array<{ sku: string; quantity: number }>;
+}
+
+export const checkInventoryConfig: WorkerConfig = {
   jobType: "check-inventory",
   maxParallelJobs: 10,
   jobTimeoutMs: 60_000,
@@ -20,23 +28,24 @@ export const checkInventoryConfig = {
   fetchVariables: ["orderId", "items"],
 };
 
-export async function checkInventoryHandler(job) {
-  const { orderId, items } = job.variables;
+export async function checkInventoryHandler(job: Job) {
+  const { orderId } = job.variables as unknown as CheckInventoryVariables;
 
   try {
     // TODO: replace with the real inventory lookup.
     // const unavailable = await inventoryService.findUnavailable(items);
-    const unavailable = [];
+    const unavailable: Array<{ sku: string; quantity: number }> = [];
 
     if (unavailable.length > 0) {
       // Modelled business outcome -> BPMN error (no retry).
+      const errorMessage = `Item(s) not in stock for order ${orderId}`;
       return job.error({
         errorCode: "ITEM_NOT_IN_STOCK",
-        errorMessage: `Item(s) not in stock for order ${orderId}`,
+        errorMessage,
         variables: {
           unavailableItem: unavailable[0],
           errorCode: "ITEM_NOT_IN_STOCK",
-          errorMessage: `Item(s) not in stock for order ${orderId}`,
+          errorMessage,
         },
       });
     }
@@ -47,8 +56,9 @@ export async function checkInventoryHandler(job) {
     });
   } catch (err) {
     // Transient/infrastructure failure -> retry with back-off.
+    const message = err instanceof Error ? err.message : String(err);
     return job.fail({
-      errorMessage: `check-inventory failed: ${err.message}`,
+      errorMessage: `check-inventory failed: ${message}`,
       retries: job.retries - 1,
       retryBackOff: 10_000,
     });
