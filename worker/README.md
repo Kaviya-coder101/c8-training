@@ -29,6 +29,19 @@ the boundary event. The error code string matches `<bpmn:error errorCode="ITEM_O
 in the BPMN, and the error `variables` supply the three values the boundary
 event maps out (`unavailableItem`, `errorCode`, `errorMessage`).
 
+## Data contract (`check-inventory`)
+
+| Direction | Variables |
+| --------- | --------- |
+| Input (read only these) | `item` (string), `inStock` (boolean) |
+| Output on success | `inventoryStatus` (string) — only this |
+| Output on out-of-stock | `unavailableItem`, `errorCode` (`"ITEM_OUT_OF_STOCK"`), `errorMessage` — only these |
+
+The handler reads only `item` and `inStock`, returns only `inventoryStatus` on
+success, and on out-of-stock throws the BPMN error returning only the three error
+variables. It never invents values the process didn't provide — malformed input
+raises an incident instead of guessing an availability outcome.
+
 ## SDK
 
 Uses [`@camunda8/orchestration-cluster-api`](https://www.npmjs.com/package/@camunda8/orchestration-cluster-api)
