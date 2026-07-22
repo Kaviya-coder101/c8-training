@@ -1,0 +1,64 @@
+{
+  "processId": "process1",
+  "testCases": [
+    {
+      "name": "Test all workers",
+      "instructions": [
+        {
+          "type": "CREATE_PROCESS_INSTANCE",
+          "processDefinitionSelector": {
+            "processDefinitionId": "process1"
+          },
+          "variables": {},
+          "runtimeInstructions": [
+            {
+              "type": "TERMINATE_PROCESS_INSTANCE",
+              "afterElementId": "Event_0f9sbko"
+            }
+          ]
+        },
+        {
+          "type": "ASSERT_ELEMENT_INSTANCE",
+          "processInstanceSelector": {
+            "processDefinitionId": "process1"
+          },
+          "elementSelector": {
+            "elementId": "Event_0f9sbko"
+          },
+          "state": "IS_COMPLETED"
+        }
+      ],
+      "metadata": {
+        "processInstanceId": "2251799813925007",
+        "coveredFlowNodes": [
+          {
+            "flowNodeId": "StartEvent_1",
+            "elementType": "bpmn:StartEvent"
+          },
+          {
+            "flowNodeId": "Activity_0tw2fu0",
+            "elementType": "bpmn:ServiceTask"
+          },
+          {
+            "flowNodeId": "Activity_1ppsbgi",
+            "elementType": "bpmn:ServiceTask"
+          },
+          {
+            "flowNodeId": "Activity_08pg6im",
+            "elementType": "bpmn:ServiceTask"
+          },
+          {
+            "flowNodeId": "Event_0f9sbko",
+            "elementType": "bpmn:EndEvent"
+          }
+        ],
+        "coveredSequenceFlows": [
+          "Flow_1mpm94e",
+          "Flow_0udsae3",
+          "Flow_0g2bnlp",
+          "Flow_1asktip"
+        ]
+      }
+    }
+  ]
+}
