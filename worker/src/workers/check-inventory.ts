@@ -7,10 +7,19 @@ import type { CamundaClient, JobActionReceipt } from "@camunda8/orchestration-cl
  *   zeebe:taskDefinition . type="check-inventory"          <- must match JOB_TYPE
  *   error boundary event . "Item not in stock"             <- catches ITEM_OUT_OF_STOCK
  *
- * The boundary event on this task maps three variables out of the error's local
- * scope (`unavailableItem`, `errorCode`, `errorMessage`), so a BPMN-error result
- * must supply them in its `variables` for the "Order not shipped" path to carry
- * that context.
+ * Process data contract:
+ *   in  : item    (string)  — SKU/name of the item to check
+ *         inStock (boolean) — whether the item is available
+ *   out (success)     : inventoryStatus (string)
+ *   out (out-of-stock): unavailableItem, errorCode, errorMessage
+ *
+ * Rules: only read `item` and `inStock`; on success return only
+ * `inventoryStatus`; on out-of-stock throw the BPMN error and return only the
+ * three error variables. Never invent variable values.
+ *
+ * The boundary event on this task maps the three error variables out of the
+ * error's local scope, so the BPMN-error result supplies them in its `variables`
+ * for the "Order not shipped" path to carry that context.
  */
 
 /** Matches `<zeebe:taskDefinition type="check-inventory" />` in the BPMN. */
@@ -29,43 +38,52 @@ const RETRY_BACK_OFF_MS = 10_000;
 export function registerCheckInventoryWorker(camunda: CamundaClient) {
   return camunda.createJobWorker({
     jobType: JOB_TYPE,
-    // Only fetch what the handler actually reads.
-    fetchVariables: ["orderId", "items"],
+    // Per the contract, the handler reads only `item` and `inStock`.
+    fetchVariables: ["item", "inStock"],
     jobHandler: async (job): Promise<JobActionReceipt> => {
       // Jobs can be delivered more than once (at-least-once delivery). Use a
-      // stable key — `job.jobKey` here, or a business key like `orderId` — as an
-      // idempotency token for any downstream side effect this handler triggers.
-      const orderId = job.variables.orderId;
-      job.log.debug(`check-inventory: job ${job.jobKey}, order ${String(orderId)}`);
+      // stable key — `job.jobKey` here, or the `item` — as an idempotency token
+      // for any downstream side effect this handler triggers.
+      const item = job.variables.item;
+      const inStock = job.variables.inStock;
+      job.log.debug(
+        `check-inventory: job ${job.jobKey}, item ${String(item)}, inStock ${String(inStock)}`,
+      );
+
+      // Don't invent values the process didn't provide. If the contract inputs
+      // are missing or the wrong type, raise an incident for an operator rather
+      // than guessing an availability outcome.
+      if (typeof item !== "string" || typeof inStock !== "boolean") {
+        return job.fail({
+          errorMessage:
+            `check-inventory: invalid input — expected item:string, inStock:boolean, ` +
+            `got item:${typeof item}, inStock:${typeof inStock}`,
+          retries: 0,
+        });
+      }
 
       try {
-        // TODO: implement the real inventory check.
-        //   1. Look up stock for each requested item (idempotent read).
-        //   2. If everything is available -> job.complete(...).
-        //   3. If an item is out of stock -> job.error(...) (business outcome).
-        //   4. On a transient infrastructure failure -> job.fail(...) (see catch).
-
         // --- Business outcome: item not in stock -------------------------------
         // Route the token to the "Item not in stock" boundary event. This is NOT
-        // retried by the engine. Populate the variables the boundary event maps.
-        const itemOutOfStock = false; // TODO: derive from the real stock check.
-        if (itemOutOfStock) {
-          const unavailableItem = "TODO-item-sku"; // TODO: the actual SKU.
+        // retried by the engine. Return only the three contract error variables.
+        if (!inStock) {
+          const errorMessage = `Item "${item}" is out of stock`;
           return job.error({
             errorCode: ERROR_ITEM_OUT_OF_STOCK,
-            errorMessage: `Item ${unavailableItem} is out of stock`,
+            errorMessage,
             variables: {
-              unavailableItem,
+              unavailableItem: item,
               errorCode: ERROR_ITEM_OUT_OF_STOCK,
-              errorMessage: `Item ${unavailableItem} is out of stock`,
+              errorMessage,
             },
           });
         }
 
         // --- Success -----------------------------------------------------------
-        // TODO: return any variables downstream tasks need.
+        // TODO: perform the real allocation side-effect here (idempotent, keyed
+        // on job.jobKey / item) before completing. Return only inventoryStatus.
         return job.complete({
-          inventoryChecked: true,
+          inventoryStatus: `${item} allocated`,
         });
       } catch (err) {
         // --- Transient failure: retry with back-off ----------------------------
