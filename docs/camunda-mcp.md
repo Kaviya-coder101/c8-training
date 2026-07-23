@@ -26,68 +26,44 @@ placeholders from **its own environment**, then spawns `mcp-proxy` (the **MCP
 server**) as a local subprocess over stdio. Only `mcp-proxy` ever talks to the
 Camunda cluster over the network.
 
-The same config file therefore works in three places — the only thing that
-changes is who fills in the secrets:
+The same config file works everywhere Claude Code runs against this repo — the
+only thing that changes is who fills in the secrets:
 
 | Environment | MCP client | Where the `CAMUNDA_*` values come from |
 | ----------- | ---------- | -------------------------------------- |
+| Claude Code web session (Claude GitHub App) | Claude Code in a remote container | env vars configured on the web execution environment |
 | Local machine | local Claude Code / CLI | `export` in your shell, or a git-ignored `.env` you source |
-| GitHub Actions | Claude Code inside the runner | repo Actions secrets → job `env:` via `${{ secrets.* }}` |
-| Claude Code web session | Claude Code in a remote container | env vars configured on the web execution environment |
 
-**These environments are isolated — they do not share secrets.** GitHub Actions
-secrets are visible only to Actions runs; a local shell and a web session each
-need their own copy of the values. Setting a secret in one place does nothing
-for the others.
+**These environments are isolated — they do not share secrets.** A web session
+and a local shell each need their own copy of the values; setting them in one
+place does nothing for the other.
 
 Two practical notes:
 
 - `.mcp.json` is read at Claude Code **startup**. Add or change it, then start a
-  **fresh** session/run for the Camunda MCP server to be picked up.
+  **fresh** session for the Camunda MCP server to be picked up.
 - If the expected `CAMUNDA_*` vars aren't set in the current environment, the
   `${VAR}` placeholders expand to empty and `mcp-proxy` will fail to
   authenticate — check the environment first (e.g. `echo "$CAMUNDA_CLIENT_ID"`).
 
-## In GitHub Actions
+## Authentication is handled by the Claude GitHub App
 
-Store each value as a **GitHub Actions secret**, then map it to an environment
-variable in the workflow so `.mcp.json` can expand it. This is done in
-[`.github/workflows/camunda-mcp.yml`](../.github/workflows/camunda-mcp.yml):
+This repo uses the managed **Claude GitHub App / Claude Code on the web**
+integration. Authentication and billing to Anthropic are handled by that
+integration (your Claude subscription) — you do **not** need to supply an
+`ANTHROPIC_API_KEY`. The only credentials you provide are the `CAMUNDA_*` values
+above, and those authenticate `mcp-proxy` to your cluster, not Claude to
+Anthropic.
 
-```yaml
-jobs:
-  camunda-mcp:
-    runs-on: ubuntu-latest
-    env:
-      CAMUNDA_BASE_URL: ${{ secrets.CAMUNDA_BASE_URL }}
-      CAMUNDA_CLIENT_ID: ${{ secrets.CAMUNDA_CLIENT_ID }}
-      CAMUNDA_CLIENT_SECRET: ${{ secrets.CAMUNDA_CLIENT_SECRET }}
-      CAMUNDA_OAUTH_URL: ${{ secrets.CAMUNDA_OAUTH_URL }}
-      CAMUNDA_TOKEN_AUDIENCE: ${{ secrets.CAMUNDA_TOKEN_AUDIENCE }}
-```
+## Values to use
 
-The `${{ secrets.NAME }}` expression is GitHub's — it injects the secret into
-the job. The `${VAR}` in `.mcp.json` is the MCP loader's — it reads that same
-env var back out. The secret value never touches a committed file.
-
-### Add the secrets
-
-Repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**:
-
-| Secret name              | Example value                                          |
+| Variable                 | Example value                                          |
 | ------------------------ | ------------------------------------------------------ |
 | `CAMUNDA_BASE_URL`       | `https://sin-1.zeebe.camunda.io/<cluster-id>`          |
 | `CAMUNDA_CLIENT_ID`      | (from Camunda Console → Cluster → API client)          |
 | `CAMUNDA_CLIENT_SECRET`  | (shown once when the API client is created)            |
 | `CAMUNDA_OAUTH_URL`      | `https://login.cloud.camunda.io/oauth/token`           |
 | `CAMUNDA_TOKEN_AUDIENCE` | `zeebe.camunda.io`                                     |
-| `ANTHROPIC_API_KEY`      | (for the Claude Code action)                           |
-
-Or with the `gh` CLI:
-
-```bash
-gh secret set CAMUNDA_CLIENT_SECRET   # prompts for the value, never echoes it
-```
 
 ## Locally
 
