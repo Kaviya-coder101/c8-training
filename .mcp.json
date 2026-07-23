@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "camunda-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@camunda8/cli", "mcp-proxy"],
+      "env": {
+        "CAMUNDA_BASE_URL": "${CAMUNDA_BASE_URL}",
+        "CAMUNDA_CLIENT_ID": "${CAMUNDA_CLIENT_ID}",
+        "CAMUNDA_CLIENT_SECRET": "${CAMUNDA_CLIENT_SECRET}",
+        "CAMUNDA_OAUTH_URL": "${CAMUNDA_OAUTH_URL}",
+        "CAMUNDA_TOKEN_AUDIENCE": "${CAMUNDA_TOKEN_AUDIENCE}"
+      }
+    }
+  }
+}
