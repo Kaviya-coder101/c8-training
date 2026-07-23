@@ -17,6 +17,37 @@ that gets expanded from the environment when the config is loaded:
 This keeps real secrets out of git, matching the repo's existing
 `.gitignore` / `*.env.template` convention.
 
+## How the secrets get supplied in each environment
+
+`.mcp.json` only says *how to launch the server* — spawn `mcp-proxy` and hand it
+five env vars. It never says where the values come from. Whatever is running
+Claude Code (the **MCP client**) reads `.mcp.json`, expands the `${VAR}`
+placeholders from **its own environment**, then spawns `mcp-proxy` (the **MCP
+server**) as a local subprocess over stdio. Only `mcp-proxy` ever talks to the
+Camunda cluster over the network.
+
+The same config file therefore works in three places — the only thing that
+changes is who fills in the secrets:
+
+| Environment | MCP client | Where the `CAMUNDA_*` values come from |
+| ----------- | ---------- | -------------------------------------- |
+| Local machine | local Claude Code / CLI | `export` in your shell, or a git-ignored `.env` you source |
+| GitHub Actions | Claude Code inside the runner | repo Actions secrets → job `env:` via `${{ secrets.* }}` |
+| Claude Code web session | Claude Code in a remote container | env vars configured on the web execution environment |
+
+**These environments are isolated — they do not share secrets.** GitHub Actions
+secrets are visible only to Actions runs; a local shell and a web session each
+need their own copy of the values. Setting a secret in one place does nothing
+for the others.
+
+Two practical notes:
+
+- `.mcp.json` is read at Claude Code **startup**. Add or change it, then start a
+  **fresh** session/run for the Camunda MCP server to be picked up.
+- If the expected `CAMUNDA_*` vars aren't set in the current environment, the
+  `${VAR}` placeholders expand to empty and `mcp-proxy` will fail to
+  authenticate — check the environment first (e.g. `echo "$CAMUNDA_CLIENT_ID"`).
+
 ## In GitHub Actions
 
 Store each value as a **GitHub Actions secret**, then map it to an environment
